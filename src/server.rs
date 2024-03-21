@@ -6,7 +6,7 @@ use tokio::net::TcpListener;
 pub struct MockLambdaRuntimeApiServer(TcpListener);
 
 impl MockLambdaRuntimeApiServer {
-  pub async fn new(port: u16) -> Self {
+  pub(crate) async fn bind(port: u16) -> Self {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
     Self(

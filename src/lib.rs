@@ -40,7 +40,7 @@ impl Proxy {
     command.env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port));
 
     let client = start_lambda_runtime_api_client().await;
-    let server = MockLambdaRuntimeApiServer::new(port).await;
+    let server = MockLambdaRuntimeApiServer::bind(port).await;
 
     // client and server are both ready, spawn the real handler process
     let child = command.spawn().expect("Failed to spawn handler process");
@@ -53,7 +53,6 @@ impl Proxy {
   }
 }
 
-// TODO: better name?
 pub struct RunningProxy {
   pub client: LambdaRuntimeApiClient,
   pub server: MockLambdaRuntimeApiServer,
