@@ -32,15 +32,22 @@ impl MockLambdaRuntimeApiServer {
     }
   }
 
+  /// Block the current thread and handle requests in a loop.
+  pub async fn serve<F>(&self, processor: impl Fn(Request<Incoming>) -> F + Clone)
+  where
+    F: Future<Output = hyper::Result<Response<Incoming>>>,
+  {
+    loop {
+      self.handle_next(processor.clone()).await
+    }
+  }
+
   /// Block the current thread and handle requests in a loop,
   /// forwarding them to the provided client, and responding with the client's response.
   pub async fn passthrough(&self, client: LambdaRuntimeApiClient) {
     let client = Mutex::new(client);
-
-    loop {
-      self
-        .handle_next(|req| async { client.lock().await.send_request(req).await })
-        .await
-    }
+    self
+      .serve(|req| async { client.lock().await.send_request(req).await })
+      .await
   }
 }
