@@ -5,17 +5,50 @@ use hyper_util::rt::TokioIo;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::{
   net::{TcpListener, TcpStream},
+  process::Command,
   sync::Mutex,
 };
 
-pub async fn start_proxy(port: u16) {
-  let client = start_lambda_runtime_api_client().await;
-  let server = create_http_server(port).await;
+#[derive(Default)]
+pub struct Proxy {
+  pub command: Option<Command>,
+  pub port: Option<u16>,
+}
 
-  // client and server are both ready
-  // TODO: spawn child process here
+impl Proxy {
+  pub fn command(mut self, cmd: Command) -> Self {
+    self.command = Some(cmd);
+    self
+  }
+  pub fn port(mut self, port: u16) -> Self {
+    self.port = Some(port);
+    self
+  }
 
-  start_proxy_requests(client, server).await
+  pub async fn start(self) {
+    let port = self
+      .port
+      .or_else(|| {
+        std::env::var("AWS_LAMBDA_RUNTIME_PROXY_PORT")
+          .ok()
+          .and_then(|s| s.parse().ok())
+      })
+      .unwrap_or(3000);
+
+    let cmd = self.command.unwrap_or_else(|| {
+      let mut cmd = Command::new(std::env::args().nth(1).expect("Missing handler command"));
+      cmd.args(std::env::args().skip(2));
+      cmd
+    });
+
+    let client = start_lambda_runtime_api_client().await;
+    let server = create_http_server(port).await;
+
+    // client and server are both ready, spawn the real handler process
+    spawn_handler_process(cmd, port).await;
+
+    start_proxy_requests(client, server).await
+  }
 }
 
 async fn start_lambda_runtime_api_client() -> Arc<Mutex<SendRequest<Incoming>>> {
@@ -37,6 +70,16 @@ async fn create_http_server(port: u16) -> TcpListener {
   TcpListener::bind(addr)
     .await
     .expect("Failed to bind for proxy server")
+}
+
+async fn spawn_handler_process(mut cmd: Command, proxy_port: u16) {
+  cmd
+    .env(
+      "AWS_LAMBDA_RUNTIME_API",
+      format!("127.0.0.1:{}", proxy_port),
+    )
+    .spawn()
+    .expect("Failed to spawn handler process");
 }
 
 async fn start_proxy_requests(client: Arc<Mutex<SendRequest<Incoming>>>, server: TcpListener) {
