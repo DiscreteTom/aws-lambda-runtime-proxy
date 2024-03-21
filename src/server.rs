@@ -1,0 +1,33 @@
+use hyper::{body::Incoming, server::conn::http1, service::service_fn, Request, Response};
+use hyper_util::rt::TokioIo;
+use std::{future::Future, net::SocketAddr};
+use tokio::net::TcpListener;
+
+pub struct MockLambdaRuntimeApiServer(TcpListener);
+
+impl MockLambdaRuntimeApiServer {
+  pub async fn new(port: u16) -> Self {
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+
+    Self(
+      TcpListener::bind(addr)
+        .await
+        .expect("Failed to bind for proxy server"),
+    )
+  }
+
+  pub async fn handle_next<F>(&self, processor: impl Fn(Request<Incoming>) -> F)
+  where
+    F: Future<Output = hyper::Result<Response<Incoming>>>,
+  {
+    let (stream, _) = self.0.accept().await.expect("Failed to accept connection");
+    let io = TokioIo::new(stream);
+
+    if let Err(err) = http1::Builder::new()
+      .serve_connection(io, service_fn(|req| async { processor(req).await }))
+      .await
+    {
+      println!("Error serving connection: {:?}", err);
+    }
+  }
+}
