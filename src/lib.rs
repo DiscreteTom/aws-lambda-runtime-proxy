@@ -11,17 +11,17 @@ use tokio::{
 
 #[derive(Default)]
 pub struct Proxy {
-  pub command: Option<Command>,
   pub port: Option<u16>,
+  pub command: Option<Command>,
 }
 
 impl Proxy {
-  pub fn command(mut self, cmd: Command) -> Self {
-    self.command = Some(cmd);
-    self
-  }
   pub fn port(mut self, port: u16) -> Self {
     self.port = Some(port);
+    self
+  }
+  pub fn command(mut self, cmd: Command) -> Self {
+    self.command = Some(cmd);
     self
   }
 
@@ -35,17 +35,18 @@ impl Proxy {
       })
       .unwrap_or(3000);
 
-    let cmd = self.command.unwrap_or_else(|| {
+    let mut command = self.command.unwrap_or_else(|| {
       let mut cmd = Command::new(std::env::args().nth(1).expect("Missing handler command"));
       cmd.args(std::env::args().skip(2));
       cmd
     });
+    command.env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port));
 
     let client = start_lambda_runtime_api_client().await;
     let server = create_http_server(port).await;
 
     // client and server are both ready, spawn the real handler process
-    spawn_handler_process(cmd, port).await;
+    command.spawn().expect("Failed to spawn handler process");
 
     start_proxy_requests(client, server).await
   }
@@ -70,16 +71,6 @@ async fn create_http_server(port: u16) -> TcpListener {
   TcpListener::bind(addr)
     .await
     .expect("Failed to bind for proxy server")
-}
-
-async fn spawn_handler_process(mut cmd: Command, proxy_port: u16) {
-  cmd
-    .env(
-      "AWS_LAMBDA_RUNTIME_API",
-      format!("127.0.0.1:{}", proxy_port),
-    )
-    .spawn()
-    .expect("Failed to spawn handler process");
 }
 
 async fn start_proxy_requests(client: Arc<Mutex<SendRequest<Incoming>>>, server: TcpListener) {
