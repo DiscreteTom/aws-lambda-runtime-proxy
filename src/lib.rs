@@ -110,10 +110,7 @@ async fn start_proxy_requests<F>(
         service_fn(|req| {
           let client = client.clone();
           let child = child.clone();
-          async {
-            processor(req, client, child).await
-            // client.lock().await.send_request(req).await
-          }
+          async { processor(req, client, child).await }
         }),
       )
       .await
