@@ -1,6 +1,5 @@
 use hyper::{
   body::Incoming, client::conn::http1::SendRequest, server::conn::http1, service::service_fn,
-  Request, Response,
 };
 use hyper_util::rt::TokioIo;
 use std::{net::SocketAddr, sync::Arc};
@@ -9,8 +8,17 @@ use tokio::{
   sync::Mutex,
 };
 
-pub async fn start() {
-  // start lambda runtime api client
+pub async fn start_proxy(port: u16) {
+  let client = start_lambda_runtime_api_client().await;
+  let server = create_http_server(port).await;
+
+  // client and server are both ready
+  // TODO: spawn child process here
+
+  start_proxy_requests(client, server).await
+}
+
+async fn start_lambda_runtime_api_client() -> Arc<Mutex<SendRequest<Incoming>>> {
   let address =
     std::env::var("AWS_LAMBDA_RUNTIME_API").expect("Missing AWS_LAMBDA_RUNTIME_API env var");
   let stream = TcpStream::connect(address)
@@ -20,30 +28,29 @@ pub async fn start() {
   let (sender, _) = hyper::client::conn::http1::handshake(io)
     .await
     .expect("Failed to handshake with runtime API");
-  let client = Arc::new(Mutex::new(sender));
+  Arc::new(Mutex::new(sender))
+}
 
-  // start http server as the lambda runtime api proxy
-  let addr = SocketAddr::from(([127, 0, 0, 1], 3000)); // TODO: customizable
-  let listener = TcpListener::bind(addr)
+async fn create_http_server(port: u16) -> TcpListener {
+  let addr = SocketAddr::from(([127, 0, 0, 1], port));
+
+  TcpListener::bind(addr)
     .await
-    .expect("Failed to bind for proxy server");
+    .expect("Failed to bind for proxy server")
+}
 
-  // proxy server is ready
-  // TODO: spawn child process here
-
+async fn start_proxy_requests(client: Arc<Mutex<SendRequest<Incoming>>>, server: TcpListener) {
   // handle runtime api requests
   loop {
-    let (stream, _) = listener
-      .accept()
-      .await
-      .expect("Failed to accept connection");
+    let (stream, _) = server.accept().await.expect("Failed to accept connection");
     let io = TokioIo::new(stream);
     let client = client.clone();
+
     tokio::task::spawn(async move {
       if let Err(err) = http1::Builder::new()
         .serve_connection(
           io,
-          service_fn(move |req| runtime_api_handler(client.clone(), req)),
+          service_fn(|req| async { client.lock().await.send_request(req).await }),
         )
         .await
       {
@@ -51,11 +58,4 @@ pub async fn start() {
       }
     });
   }
-}
-
-async fn runtime_api_handler(
-  client: Arc<Mutex<SendRequest<Incoming>>>,
-  req: Request<Incoming>,
-) -> Result<Response<Incoming>, hyper::Error> {
-  client.lock().await.send_request(req).await
 }
