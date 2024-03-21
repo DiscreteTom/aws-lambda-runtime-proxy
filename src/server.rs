@@ -1,7 +1,8 @@
+use crate::LambdaRuntimeApiClient;
 use hyper::{body::Incoming, server::conn::http1, service::service_fn, Request, Response};
 use hyper_util::rt::TokioIo;
 use std::{future::Future, net::SocketAddr};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::Mutex};
 
 pub struct MockLambdaRuntimeApiServer(TcpListener);
 
@@ -28,6 +29,16 @@ impl MockLambdaRuntimeApiServer {
       .await
     {
       println!("Error serving connection: {:?}", err);
+    }
+  }
+
+  pub async fn passthrough(&self, client: LambdaRuntimeApiClient) {
+    let client = Mutex::new(client);
+
+    loop {
+      self
+        .handle_next(|req| async { client.lock().await.send_request(req).await })
+        .await
     }
   }
 }
