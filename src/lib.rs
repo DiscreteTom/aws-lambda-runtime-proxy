@@ -22,7 +22,7 @@ impl Proxy {
     self
   }
 
-  pub async fn start(self) -> RunningProxy {
+  pub async fn spawn(self) -> RunningProxy {
     let port = self
       .port
       .or_else(|| {
