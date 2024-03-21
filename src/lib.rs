@@ -4,6 +4,7 @@ mod server;
 pub use client::*;
 pub use server::*;
 
+use std::process::Stdio;
 use tokio::process::{Child, Command};
 
 #[derive(Default)]
@@ -37,7 +38,10 @@ impl Proxy {
       cmd.args(std::env::args().skip(2));
       cmd
     });
-    command.env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port));
+    command
+      .env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port))
+      .stdout(Stdio::piped())
+      .stderr(Stdio::piped());
 
     let client = start_lambda_runtime_api_client().await;
     let server = MockLambdaRuntimeApiServer::bind(port).await;
