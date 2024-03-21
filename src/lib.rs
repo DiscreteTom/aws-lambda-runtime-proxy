@@ -65,9 +65,17 @@ async fn start_lambda_runtime_api_client() -> SendRequest<Incoming> {
     .await
     .expect("Failed to connect to runtime API");
   let io = TokioIo::new(stream);
-  let (sender, _) = hyper::client::conn::http1::handshake(io)
+  let (sender, conn) = hyper::client::conn::http1::handshake(io)
     .await
     .expect("Failed to handshake with runtime API");
+
+  // Spawn a task to poll the connection, driving the HTTP state
+  tokio::task::spawn(async move {
+    if let Err(err) = conn.await {
+      println!("Connection failed: {:?}", err);
+    }
+  });
+
   sender
 }
 
