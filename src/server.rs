@@ -32,6 +32,8 @@ impl MockLambdaRuntimeApiServer {
     }
   }
 
+  /// Block the current thread and handle requests in a loop,
+  /// forwarding them to the provided client, and responding with the client's response.
   pub async fn passthrough(&self, client: LambdaRuntimeApiClient) {
     let client = Mutex::new(client);
 
