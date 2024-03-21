@@ -1,11 +1,12 @@
 use hyper::{
   body::Incoming, client::conn::http1::SendRequest, server::conn::http1, service::service_fn,
+  Request, Response,
 };
 use hyper_util::rt::TokioIo;
-use std::{net::SocketAddr, sync::Arc};
+use std::{future::Future, net::SocketAddr, sync::Arc};
 use tokio::{
   net::{TcpListener, TcpStream},
-  process::Command,
+  process::{Child, Command},
   sync::Mutex,
 };
 
@@ -25,7 +26,12 @@ impl Proxy {
     self
   }
 
-  pub async fn start(self) {
+  pub async fn start<F>(
+    self,
+    processor: impl Fn(Request<Incoming>, Arc<Mutex<SendRequest<Incoming>>>, Arc<Mutex<Child>>) -> F,
+  ) where
+    F: Future<Output = hyper::Result<Response<Incoming>>>,
+  {
     let port = self
       .port
       .or_else(|| {
@@ -46,13 +52,13 @@ impl Proxy {
     let server = create_http_server(port).await;
 
     // client and server are both ready, spawn the real handler process
-    command.spawn().expect("Failed to spawn handler process");
+    let child = command.spawn().expect("Failed to spawn handler process");
 
-    start_proxy_requests(client, server).await
+    start_proxy_requests(client, server, child, processor).await
   }
 }
 
-async fn start_lambda_runtime_api_client() -> Arc<Mutex<SendRequest<Incoming>>> {
+async fn start_lambda_runtime_api_client() -> SendRequest<Incoming> {
   let address =
     std::env::var("AWS_LAMBDA_RUNTIME_API").expect("Missing AWS_LAMBDA_RUNTIME_API env var");
   let stream = TcpStream::connect(address)
@@ -62,7 +68,7 @@ async fn start_lambda_runtime_api_client() -> Arc<Mutex<SendRequest<Incoming>>> 
   let (sender, _) = hyper::client::conn::http1::handshake(io)
     .await
     .expect("Failed to handshake with runtime API");
-  Arc::new(Mutex::new(sender))
+  sender
 }
 
 async fn create_http_server(port: u16) -> TcpListener {
@@ -73,23 +79,38 @@ async fn create_http_server(port: u16) -> TcpListener {
     .expect("Failed to bind for proxy server")
 }
 
-async fn start_proxy_requests(client: Arc<Mutex<SendRequest<Incoming>>>, server: TcpListener) {
+async fn start_proxy_requests<F>(
+  client: SendRequest<Incoming>,
+  server: TcpListener,
+  child: Child,
+  processor: impl Fn(Request<Incoming>, Arc<Mutex<SendRequest<Incoming>>>, Arc<Mutex<Child>>) -> F,
+) where
+  F: Future<Output = hyper::Result<Response<Incoming>>>,
+{
+  // TODO： prevent Arc Mutex?
+  let client = Arc::new(Mutex::new(client));
+  let child = Arc::new(Mutex::new(child));
+
   // handle runtime api requests
   loop {
     let (stream, _) = server.accept().await.expect("Failed to accept connection");
     let io = TokioIo::new(stream);
-    let client = client.clone();
 
-    tokio::task::spawn(async move {
-      if let Err(err) = http1::Builder::new()
-        .serve_connection(
-          io,
-          service_fn(|req| async { client.lock().await.send_request(req).await }),
-        )
-        .await
-      {
-        println!("Error serving connection: {:?}", err);
-      }
-    });
+    if let Err(err) = http1::Builder::new()
+      .serve_connection(
+        io,
+        service_fn(|req| {
+          let client = client.clone();
+          let child = child.clone();
+          async {
+            processor(req, client, child).await
+            // client.lock().await.send_request(req).await
+          }
+        }),
+      )
+      .await
+    {
+      println!("Error serving connection: {:?}", err);
+    }
   }
 }
