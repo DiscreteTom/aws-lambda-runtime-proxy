@@ -3,11 +3,10 @@ use hyper::{
   Request, Response,
 };
 use hyper_util::rt::TokioIo;
-use std::{future::Future, net::SocketAddr, sync::Arc};
+use std::{future::Future, net::SocketAddr};
 use tokio::{
   net::{TcpListener, TcpStream},
   process::{Child, Command},
-  sync::Mutex,
 };
 
 #[derive(Default)]
@@ -26,12 +25,7 @@ impl Proxy {
     self
   }
 
-  pub async fn start<F>(
-    self,
-    processor: impl Fn(Request<Incoming>, Arc<Mutex<SendRequest<Incoming>>>, Arc<Mutex<Child>>) -> F,
-  ) where
-    F: Future<Output = hyper::Result<Response<Incoming>>>,
-  {
+  pub async fn start(self) -> RunningProxy {
     let port = self
       .port
       .or_else(|| {
@@ -49,13 +43,26 @@ impl Proxy {
     command.env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port));
 
     let client = start_lambda_runtime_api_client().await;
-    let server = create_http_server(port).await;
+    let server = Server {
+      server: create_http_server(port).await,
+    };
 
     // client and server are both ready, spawn the real handler process
     let child = command.spawn().expect("Failed to spawn handler process");
 
-    start_proxy_requests(client, server, child, processor).await
+    RunningProxy {
+      client,
+      server,
+      child,
+    }
   }
+}
+
+// TODO: better name?
+pub struct RunningProxy {
+  pub client: SendRequest<Incoming>,
+  pub server: Server,
+  pub child: Child,
 }
 
 async fn start_lambda_runtime_api_client() -> SendRequest<Incoming> {
@@ -87,32 +94,24 @@ async fn create_http_server(port: u16) -> TcpListener {
     .expect("Failed to bind for proxy server")
 }
 
-async fn start_proxy_requests<F>(
-  client: SendRequest<Incoming>,
+pub struct Server {
   server: TcpListener,
-  child: Child,
-  processor: impl Fn(Request<Incoming>, Arc<Mutex<SendRequest<Incoming>>>, Arc<Mutex<Child>>) -> F,
-) where
-  F: Future<Output = hyper::Result<Response<Incoming>>>,
-{
-  // TODO： prevent Arc Mutex?
-  let client = Arc::new(Mutex::new(client));
-  let child = Arc::new(Mutex::new(child));
+}
 
-  // handle runtime api requests
-  loop {
-    let (stream, _) = server.accept().await.expect("Failed to accept connection");
+impl Server {
+  pub async fn handle_next<F>(&self, processor: impl Fn(Request<Incoming>) -> F)
+  where
+    F: Future<Output = hyper::Result<Response<Incoming>>>,
+  {
+    let (stream, _) = self
+      .server
+      .accept()
+      .await
+      .expect("Failed to accept connection");
     let io = TokioIo::new(stream);
 
     if let Err(err) = http1::Builder::new()
-      .serve_connection(
-        io,
-        service_fn(|req| {
-          let client = client.clone();
-          let child = child.clone();
-          async { processor(req, client, child).await }
-        }),
-      )
+      .serve_connection(io, service_fn(|req| async { processor(req).await }))
       .await
     {
       println!("Error serving connection: {:?}", err);
