@@ -41,15 +41,24 @@ impl Proxy {
     cmd
   }
 
+  /// Set the port of the proxy server.
+  /// If not set, the port will be read from the environment variable `AWS_LAMBDA_RUNTIME_PROXY_PORT`,
+  /// or default to 3000.
   pub fn port(mut self, port: u16) -> Self {
     self.port = Some(port);
     self
   }
+
+  /// Set the command of the handler process.
+  /// If not set, the command will be created using [`Self::default_command`].
   pub fn command(mut self, cmd: Command) -> Self {
     self.command = Some(cmd);
     self
   }
 
+  /// Spawn the proxy server, lambda runtime api client and the handler process.
+  /// The handler process will be spawned with the environment variable `AWS_LAMBDA_RUNTIME_API`
+  /// set to the address of the proxy server.
   pub async fn spawn(self) -> RunningProxy {
     let port = self
       .port
