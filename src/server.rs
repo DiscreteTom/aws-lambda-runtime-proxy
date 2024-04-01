@@ -42,14 +42,14 @@ impl MockLambdaRuntimeApiServer {
   }
 
   /// Block the current thread and handle requests with the processor in a loop.
-  pub async fn serve<F, R>(&self, processor: impl Fn(Request<Incoming>) -> F + Clone)
+  pub async fn serve<F, R>(&self, processor: impl Fn(Request<Incoming>) -> F)
   where
     F: Future<Output = hyper::Result<Response<R>>>,
     R: hyper::body::Body + 'static,
     <R as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
   {
     loop {
-      self.handle_next(processor.clone()).await
+      self.handle_next(&processor).await
     }
   }
 
