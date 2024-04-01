@@ -1,5 +1,10 @@
 use crate::LambdaRuntimeApiClient;
-use hyper::{body::Incoming, server::conn::http1, service::service_fn, Request, Response};
+use hyper::{
+  body::{Body, Incoming},
+  server::conn::http1,
+  service::service_fn,
+  Request, Response,
+};
 use hyper_util::rt::TokioIo;
 use std::{future::Future, net::SocketAddr};
 use tokio::{net::TcpListener, sync::Mutex};
@@ -18,9 +23,12 @@ impl MockLambdaRuntimeApiServer {
     )
   }
 
-  pub async fn handle_next<F>(&self, processor: impl Fn(Request<Incoming>) -> F)
+  /// Handle the next incoming request.
+  pub async fn handle_next<F, R>(&self, processor: impl Fn(Request<Incoming>) -> F)
   where
-    F: Future<Output = hyper::Result<Response<Incoming>>>,
+    F: Future<Output = hyper::Result<Response<R>>>,
+    R: hyper::body::Body + 'static,
+    <R as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
   {
     let (stream, _) = self.0.accept().await.expect("Failed to accept connection");
     let io = TokioIo::new(stream);
@@ -33,10 +41,12 @@ impl MockLambdaRuntimeApiServer {
     }
   }
 
-  /// Block the current thread and handle requests in a loop.
-  pub async fn serve<F>(&self, processor: impl Fn(Request<Incoming>) -> F + Clone)
+  /// Block the current thread and handle requests with the processor in a loop.
+  pub async fn serve<F, R>(&self, processor: impl Fn(Request<Incoming>) -> F + Clone)
   where
-    F: Future<Output = hyper::Result<Response<Incoming>>>,
+    F: Future<Output = hyper::Result<Response<R>>>,
+    R: hyper::body::Body + 'static,
+    <R as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
   {
     loop {
       self.handle_next(processor.clone()).await
