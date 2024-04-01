@@ -14,6 +14,34 @@ pub struct Proxy {
 }
 
 impl Proxy {
+  /// Create the handler command from the `argv[1..]`.
+  /// For example if the command of the current process is `proxy node --help`
+  /// then the handler command will be `node --help`.
+  /// You can modify the handler command and pass it to [`Self::command`].
+  /// # Examples
+  /// ```
+  /// use lambda_runtime_proxy::Proxy;
+  /// use std::process::Stdio;
+  ///
+  /// #[tokio::main]
+  /// async fn main {
+  ///   let command = Proxy::default_command()
+  ///     // override environment variables for the handler process
+  ///     .env("KEY", "VALUE")
+  ///     // pipe the stdout and stderr of the handler process
+  ///     .stdout(Stdio::piped())
+  ///     .stderr(Stdio::piped())
+  ///   Proxy::default()
+  ///     .command(command)
+  ///     .spawn().await;
+  /// }
+  /// ```
+  pub fn default_command() -> Command {
+    let mut cmd = Command::new(std::env::args().nth(1).expect("Missing handler command"));
+    cmd.args(std::env::args().skip(2));
+    cmd
+  }
+
   pub fn port(mut self, port: u16) -> Self {
     self.port = Some(port);
     self
@@ -33,11 +61,7 @@ impl Proxy {
       })
       .unwrap_or(3000);
 
-    let mut command = self.command.unwrap_or_else(|| {
-      let mut cmd = Command::new(std::env::args().nth(1).expect("Missing handler command"));
-      cmd.args(std::env::args().skip(2));
-      cmd
-    });
+    let mut command = self.command.unwrap_or_else(|| Self::default_command());
     command
       .env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port))
       .stdout(Stdio::piped())
