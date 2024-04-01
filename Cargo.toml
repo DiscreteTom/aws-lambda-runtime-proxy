@@ -2,6 +2,11 @@
 name = "aws-lambda-runtime-proxy"
 version = "0.1.0"
 edition = "2021"
+authors = ["DiscreteTom <discrete_tom@outlook.com>"]
+description = "A helper lib to customize the communication between the lambda handler process and the lambda runtime api."
+repository = "https://github.com/DiscreteTom/aws-lambda-runtime-proxy"
+keywords = ["aws", "lambda", "runtime", "proxy"]
+license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
