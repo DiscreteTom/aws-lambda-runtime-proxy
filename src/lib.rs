@@ -24,12 +24,17 @@ impl Proxy {
   ///
   /// #[tokio::main]
   /// async fn main {
-  ///   let command = Proxy::default_command()
+  ///   // retrieve the default handler command
+  ///   let mut command = Proxy::default_command();
+  ///
+  ///   // enhance the handler command
+  ///   command
   ///     // override environment variables for the handler process
   ///     .env("KEY", "VALUE")
   ///     // pipe the stdout and stderr of the handler process
   ///     .stdout(Stdio::piped())
-  ///     .stderr(Stdio::piped())
+  ///     .stderr(Stdio::piped());
+  ///
   ///   Proxy::default()
   ///     .command(command)
   ///     .spawn().await;
