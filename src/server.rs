@@ -24,11 +24,11 @@ impl MockLambdaRuntimeApiServer {
   }
 
   /// Handle the next incoming request.
-  pub async fn handle_next<F, R>(&self, processor: impl Fn(Request<Incoming>) -> F)
+  pub async fn handle_next<ResBody, Fut>(&self, processor: impl Fn(Request<Incoming>) -> Fut)
   where
-    F: Future<Output = hyper::Result<Response<R>>>,
-    R: hyper::body::Body + 'static,
-    <R as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+    ResBody: hyper::body::Body + 'static,
+    <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+    Fut: Future<Output = hyper::Result<Response<ResBody>>>,
   {
     let (stream, _) = self.0.accept().await.expect("Failed to accept connection");
     let io = TokioIo::new(stream);
@@ -42,11 +42,11 @@ impl MockLambdaRuntimeApiServer {
   }
 
   /// Block the current thread and handle requests with the processor in a loop.
-  pub async fn serve<F, R>(&self, processor: impl Fn(Request<Incoming>) -> F)
+  pub async fn serve<ResBody, Fut>(&self, processor: impl Fn(Request<Incoming>) -> Fut)
   where
-    F: Future<Output = hyper::Result<Response<R>>>,
-    R: hyper::body::Body + 'static,
-    <R as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+    Fut: Future<Output = hyper::Result<Response<ResBody>>>,
+    ResBody: hyper::body::Body + 'static,
+    <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
   {
     loop {
       self.handle_next(&processor).await

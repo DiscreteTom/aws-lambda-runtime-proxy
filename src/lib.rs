@@ -67,10 +67,10 @@ impl Proxy {
   /// Spawn the proxy server, lambda runtime api client and the handler process.
   /// The handler process will be spawned with the environment variable `AWS_LAMBDA_RUNTIME_API`
   /// set to the address of the proxy server.
-  pub async fn spawn<T: Body + Send + 'static>(self) -> RunningProxy<T>
+  pub async fn spawn<ReqBody: Body + Send + 'static>(self) -> RunningProxy<ReqBody>
   where
-    T::Data: Send,
-    T::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+    ReqBody::Data: Send,
+    ReqBody::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
   {
     let port = self
       .port
@@ -98,8 +98,8 @@ impl Proxy {
   }
 }
 
-pub struct RunningProxy<T> {
-  pub client: LambdaRuntimeApiClient<T>,
+pub struct RunningProxy<ReqBody> {
+  pub client: LambdaRuntimeApiClient<ReqBody>,
   pub server: MockLambdaRuntimeApiServer,
   /// The lambda handler process.
   pub handler: Child,

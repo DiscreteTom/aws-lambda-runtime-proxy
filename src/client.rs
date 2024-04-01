@@ -6,26 +6,26 @@ use hyper_util::rt::TokioIo;
 use std::ops::{Deref, DerefMut};
 use tokio::net::TcpStream;
 
-pub struct LambdaRuntimeApiClient<T>(SendRequest<T>);
+pub struct LambdaRuntimeApiClient<ReqBody>(SendRequest<ReqBody>);
 
-impl<T> Deref for LambdaRuntimeApiClient<T> {
-  type Target = SendRequest<T>;
+impl<ReqBody> Deref for LambdaRuntimeApiClient<ReqBody> {
+  type Target = SendRequest<ReqBody>;
   fn deref(&self) -> &Self::Target {
     &self.0
   }
 }
-impl<T> DerefMut for LambdaRuntimeApiClient<T> {
+impl<ReqBody> DerefMut for LambdaRuntimeApiClient<ReqBody> {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.0
   }
 }
 
-impl<T: Body + Send + 'static> LambdaRuntimeApiClient<T> {
+impl<ReqBody: Body + Send + 'static> LambdaRuntimeApiClient<ReqBody> {
   /// Create a new client and connect to the runtime API.
   pub async fn start() -> Self
   where
-    T::Data: Send,
-    T::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+    ReqBody::Data: Send,
+    ReqBody::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
   {
     let address =
       std::env::var("AWS_LAMBDA_RUNTIME_API").expect("Missing AWS_LAMBDA_RUNTIME_API env var");
