@@ -83,12 +83,12 @@ impl Proxy {
     let server = MockLambdaRuntimeApiServer::bind(port).await;
 
     // client and server are both ready, spawn the real handler process
-    let runtime = command.spawn().expect("Failed to spawn handler process");
+    let handler = command.spawn().expect("Failed to spawn handler process");
 
     RunningProxy {
       client,
       server,
-      runtime,
+      handler,
     }
   }
 }
@@ -96,5 +96,6 @@ impl Proxy {
 pub struct RunningProxy {
   pub client: LambdaRuntimeApiClient,
   pub server: MockLambdaRuntimeApiServer,
-  pub runtime: Child,
+  /// The lambda handler process.
+  pub handler: Child,
 }
