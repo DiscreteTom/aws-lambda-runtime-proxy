@@ -8,7 +8,9 @@ use tokio::process::{Child, Command};
 
 #[derive(Default)]
 pub struct Proxy {
+  /// See [`Self::port`].
   pub port: Option<u16>,
+  /// See [`Self::command`].
   pub command: Option<Command>,
 }
 
@@ -48,7 +50,7 @@ impl Proxy {
 
   /// Set the port of the proxy server.
   /// If not set, the port will be read from the environment variable `AWS_LAMBDA_RUNTIME_PROXY_PORT`,
-  /// or default to 3000.
+  /// or default to `3000`.
   pub fn port(mut self, port: u16) -> Self {
     self.port = Some(port);
     self
