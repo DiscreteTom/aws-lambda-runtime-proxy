@@ -2,7 +2,6 @@
 
 ![Crates.io Version](https://img.shields.io/crates/v/aws-lambda-runtime-proxy?style=flat-square)
 ![license](https://img.shields.io/github/license/DiscreteTom/aws-lambda-runtime-proxy?style=flat-square)
-![rust](https://img.shields.io/badge/built_with-rust-DEA584?style=flat-square)
 
 ![overview](./img/overview.png)
 
@@ -15,13 +14,13 @@ A helper lib to customize the communication between the lambda handler process a
 Add the following to the `dependencies` in your `Cargo.toml`:
 
 ```toml
-lambda_runtime_proxy = "0.1"
+aws-lambda-runtime-proxy = "0.1"
 ```
 
 or run:
 
 ```bash
-cargo add lambda_runtime_proxy
+cargo add aws-lambda-runtime-proxy
 ```
 
 ### [Examples](./examples)
