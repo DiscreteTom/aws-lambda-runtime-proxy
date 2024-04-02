@@ -7,6 +7,7 @@ description = "A helper lib to customize the communication between the lambda ha
 repository = "https://github.com/DiscreteTom/aws-lambda-runtime-proxy"
 keywords = ["aws", "lambda", "runtime", "proxy"]
 license-file = "LICENSE"
+exclude = ["examples/*", "img/*", "rustfmt.toml", ".gitignore", "CHANGELOG.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
