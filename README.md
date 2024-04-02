@@ -1,6 +1,6 @@
 # AWS Lambda Runtime Proxy
 
-![Crates.io Version](https://img.shields.io/crates/v/aws-lambda-runtime-proxy?style=flat-square)
+[![Crates.io Version](https://img.shields.io/crates/v/aws-lambda-runtime-proxy?style=flat-square)](https://crates.io/crates/aws-lambda-runtime-proxy)
 ![license](https://img.shields.io/github/license/DiscreteTom/aws-lambda-runtime-proxy?style=flat-square)
 
 ![overview](./img/overview.png)
@@ -24,6 +24,10 @@ cargo add aws-lambda-runtime-proxy
 ```
 
 ### [Examples](./examples)
+
+A real world case: [AWS Lambda Log Proxy](https://github.com/DiscreteTom/aws-lambda-log-proxy).
+
+### [Documentation](https://docs.rs/aws-lambda-runtime-proxy/)
 
 ## What's the Purpose of this Project?
 
