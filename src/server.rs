@@ -6,7 +6,7 @@ use hyper::{
   Request, Response,
 };
 use hyper_util::rt::TokioIo;
-use std::{future::Future, net::SocketAddr};
+use std::{future::Future, net::SocketAddr, sync::Arc};
 use tokio::{net::TcpListener, sync::Mutex};
 
 pub struct MockLambdaRuntimeApiServer(TcpListener);
@@ -23,43 +23,55 @@ impl MockLambdaRuntimeApiServer {
     )
   }
 
-  /// Handle the next incoming request.
-  pub async fn handle_next<ResBody, Fut>(&self, processor: impl Fn(Request<Incoming>) -> Fut)
-  where
-    ResBody: hyper::body::Body + 'static,
-    <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
-    Fut: Future<Output = hyper::Result<Response<ResBody>>>,
+  /// Handle the next incoming connection with the provided processor.
+  pub async fn handle_next<ResBody, Fut>(
+    &self,
+    processor: impl Fn(Request<Incoming>) -> Fut + Send + Sync + 'static,
+  ) where
+    ResBody: hyper::body::Body + Send + 'static,
+    <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>> + Send,
+    Fut: Future<Output = hyper::Result<Response<ResBody>>> + Send,
+    <ResBody as Body>::Data: Send,
   {
     let (stream, _) = self.0.accept().await.expect("Failed to accept connection");
     let io = TokioIo::new(stream);
 
-    if let Err(err) = http1::Builder::new()
-      .serve_connection(io, service_fn(|req| async { processor(req).await }))
-      .await
-    {
-      println!("Error serving connection: {:?}", err);
-    }
+    // in lambda's execution environment there is usually only one connection
+    // but we can't rely on that, so spawn a task for each connection
+    tokio::spawn(async move {
+      if let Err(err) = http1::Builder::new()
+        .serve_connection(io, service_fn(|req| async { processor(req).await }))
+        .await
+      {
+        println!("Error serving connection: {:?}", err);
+      }
+    });
   }
 
-  /// Block the current thread and handle requests with the processor in a loop.
-  pub async fn serve<ResBody, Fut>(&self, processor: impl Fn(Request<Incoming>) -> Fut)
-  where
-    Fut: Future<Output = hyper::Result<Response<ResBody>>>,
-    ResBody: hyper::body::Body + 'static,
-    <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+  /// Block the current thread and handle connections with the processor in a loop.
+  pub async fn serve<ResBody, Fut>(
+    &self,
+    processor: impl Fn(Request<Incoming>) -> Fut + Send + Sync + Clone + 'static,
+  ) where
+    Fut: Future<Output = hyper::Result<Response<ResBody>>> + Send,
+    ResBody: hyper::body::Body + Send + 'static,
+    <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>> + Send,
+    <ResBody as Body>::Data: Send,
   {
     loop {
-      self.handle_next(&processor).await
+      self.handle_next(processor.clone()).await
     }
   }
 
-  /// Block the current thread and handle requests in a loop,
+  /// Block the current thread and handle connections in a loop,
   /// forwarding them to the provided client, and responding with the client's response.
   pub async fn passthrough(&self, client: LambdaRuntimeApiClient<Incoming>) {
-    // TODO: how to avoid creating the Mutex here?
-    let client = Mutex::new(client);
+    let client = Arc::new(Mutex::new(client));
     self
-      .serve(|req| async { client.lock().await.send_request(req).await })
+      .serve(move |req| {
+        let client = client.clone();
+        async move { client.lock().await.send_request(req).await }
+      })
       .await
   }
 }
