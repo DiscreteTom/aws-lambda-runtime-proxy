@@ -67,12 +67,7 @@ impl MockLambdaRuntimeApiServer {
   /// forwarding requests to a new [`LambdaRuntimeApiClient`], and responding with the client's response.
   pub async fn passthrough(&self) {
     self
-      .serve(|req| async {
-        LambdaRuntimeApiClient::start()
-          .await
-          .send_request(req)
-          .await
-      })
+      .serve(|req| async { LambdaRuntimeApiClient::new().await.send_request(req).await })
       .await
   }
 }

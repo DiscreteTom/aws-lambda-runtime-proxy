@@ -22,7 +22,7 @@ impl<ReqBody> DerefMut for LambdaRuntimeApiClient<ReqBody> {
 
 impl<ReqBody: Body + Send + 'static> LambdaRuntimeApiClient<ReqBody> {
   /// Create a new client and connect to the runtime API.
-  pub async fn start() -> Self
+  pub async fn new() -> Self
   where
     ReqBody::Data: Send,
     ReqBody::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
