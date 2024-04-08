@@ -6,8 +6,8 @@ use hyper::{
   Request, Response,
 };
 use hyper_util::rt::TokioIo;
-use std::{future::Future, net::SocketAddr, sync::Arc};
-use tokio::{net::TcpListener, sync::Mutex};
+use std::{future::Future, net::SocketAddr};
+use tokio::net::TcpListener;
 
 pub struct MockLambdaRuntimeApiServer(TcpListener);
 
@@ -64,13 +64,14 @@ impl MockLambdaRuntimeApiServer {
   }
 
   /// Block the current thread and handle connections in a loop,
-  /// forwarding them to the provided client, and responding with the client's response.
-  pub async fn passthrough(&self, client: LambdaRuntimeApiClient<Incoming>) {
-    let client = Arc::new(Mutex::new(client));
+  /// forwarding requests to a new [`LambdaRuntimeApiClient`], and responding with the client's response.
+  pub async fn passthrough(&self) {
     self
-      .serve(move |req| {
-        let client = client.clone();
-        async move { client.lock().await.send_request(req).await }
+      .serve(|req| async {
+        LambdaRuntimeApiClient::start()
+          .await
+          .send_request(req)
+          .await
       })
       .await
   }
