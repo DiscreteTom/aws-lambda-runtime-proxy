@@ -4,7 +4,6 @@ mod server;
 pub use client::*;
 pub use server::*;
 
-use hyper::body::Body;
 use tokio::process::{Child, Command};
 
 #[derive(Default)]
@@ -64,14 +63,10 @@ impl Proxy {
     self
   }
 
-  /// Spawn the proxy server, lambda runtime api client and the handler process.
+  /// Spawn the proxy server and the handler process.
   /// The handler process will be spawned with the environment variable `AWS_LAMBDA_RUNTIME_API`
   /// set to the address of the proxy server.
-  pub async fn spawn<ReqBody: Body + Send + 'static>(self) -> RunningProxy<ReqBody>
-  where
-    ReqBody::Data: Send,
-    ReqBody::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
-  {
+  pub async fn spawn(self) -> RunningProxy {
     let port = self
       .port
       .or_else(|| {
@@ -84,22 +79,16 @@ impl Proxy {
     let mut command = self.command.unwrap_or_else(|| Self::default_command());
     command.env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port));
 
-    let client = LambdaRuntimeApiClient::start().await;
     let server = MockLambdaRuntimeApiServer::bind(port).await;
 
-    // client and server are both ready, spawn the real handler process
+    // server is ready, spawn the real handler process
     let handler = command.spawn().expect("Failed to spawn handler process");
 
-    RunningProxy {
-      client,
-      server,
-      handler,
-    }
+    RunningProxy { server, handler }
   }
 }
 
-pub struct RunningProxy<ReqBody> {
-  pub client: LambdaRuntimeApiClient<ReqBody>,
+pub struct RunningProxy {
   pub server: MockLambdaRuntimeApiServer,
   /// The lambda handler process.
   pub handler: Child,
