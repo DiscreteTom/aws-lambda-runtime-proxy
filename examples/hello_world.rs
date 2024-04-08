@@ -10,5 +10,5 @@ async fn main() {
   //   .spawn()
   //   .await;
 
-  proxy.server.passthrough(proxy.client).await;
+  proxy.server.passthrough().await;
 }
