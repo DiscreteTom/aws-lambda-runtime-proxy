@@ -1,6 +1,6 @@
 [package]
 name = "aws-lambda-runtime-proxy"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["DiscreteTom <discrete_tom@outlook.com>"]
 description = "A helper lib to customize the communication between the lambda handler process and the lambda runtime api."
