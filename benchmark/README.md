@@ -4,10 +4,10 @@
 
 ```bash
 # run in the root of the project
-
 RUSTFLAGS="-C link-arg=-s" cargo build --release --target x86_64-unknown-linux-musl --example hello_world
-cp target/x86_64-unknown-linux-musl/release/examples/hello_world benchmark/layer
-cp benchmark/scripts/entry.sh benchmark/layer
+mkdir -p benchmark/layer
+cp target/x86_64-unknown-linux-musl/release/examples/hello_world benchmark/layer/
+cp benchmark/scripts/entry.sh benchmark/layer/
 
 cd benchmark
 sam build
@@ -18,7 +18,7 @@ cd ..
 In one line
 
 ```bash
-RUSTFLAGS="-C link-arg=-s" cargo build --release --target x86_64-unknown-linux-musl --example hello_world && cp target/x86_64-unknown-linux-musl/release/examples/hello_world benchmark/layer && cp benchmark/scripts/entry.sh benchmark/layer && cd benchmark && sam build && sam deploy && cd ..
+RUSTFLAGS="-C link-arg=-s" cargo build --release --target x86_64-unknown-linux-musl --example hello_world && mkdir -p benchmark/layer && cp target/x86_64-unknown-linux-musl/release/examples/hello_world benchmark/layer/ && cp benchmark/scripts/entry.sh benchmark/layer/ && cd benchmark && sam build && sam deploy && cd ..
 ```
 
 ## Test
