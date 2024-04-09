@@ -1,6 +1,8 @@
+use http_body_util::{BodyExt, Full};
 use hyper::{
-  body::Body,
+  body::{Body, Bytes, Incoming},
   client::conn::http1::{self, SendRequest},
+  Request, Response,
 };
 use hyper_util::rt::TokioIo;
 use std::ops::{Deref, DerefMut};
@@ -47,5 +49,25 @@ impl<ReqBody: Body + Send + 'static> LambdaRuntimeApiClient<ReqBody> {
     });
 
     Self(sender)
+  }
+}
+
+impl LambdaRuntimeApiClient<Incoming> {
+  /// Send a request to the runtime API and return the response.
+  pub async fn forward(req: Request<Incoming>) -> hyper::Result<Response<Full<Bytes>>> {
+    // tested and it looks like we create the client every time is faster than lock a Arc<Mutex<>> and reuse it.
+    // create a new client and send the request usually cost < 1ms.
+    let res = LambdaRuntimeApiClient::new()
+      .await
+      .send_request(req)
+      .await
+      .unwrap();
+    let (parts, body) = res.into_parts();
+    let bytes = body.collect().await.unwrap().to_bytes();
+    Ok(Response::from_parts(parts, Full::new(bytes)))
+
+    // TODO: why we can't just return `LambdaRuntimeApiClient::new().await.send_request(req).await`?
+    // tested and it works but will add ~40ms latency when serving API GW event (maybe for all big event), why?
+    // maybe because of the `Incoming` type? can we stream the body instead of buffering it?
   }
 }
