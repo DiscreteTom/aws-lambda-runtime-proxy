@@ -10,6 +10,11 @@ use hyper_util::rt::TokioIo;
 use std::{future::Future, net::SocketAddr};
 use tokio::net::TcpListener;
 
+/// A mock server for the Lambda Runtime API.
+/// Use [`Self::bind`] to create a new server, and [`Self::serve`] to start serving requests.
+///
+/// If you want to handle each connection manually, use [`Self::handle_next`].
+/// If you want to forward requests to the real Lambda Runtime API, use [`Self::passthrough`].
 pub struct MockLambdaRuntimeApiServer(TcpListener);
 
 impl MockLambdaRuntimeApiServer {

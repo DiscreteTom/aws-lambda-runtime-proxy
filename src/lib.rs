@@ -6,6 +6,7 @@ pub use server::*;
 
 use tokio::process::{Child, Command};
 
+/// Use [`Proxy::spawn`] to create a new proxy server and handler process.
 #[derive(Default)]
 pub struct Proxy {
   /// See [`Self::port`].
@@ -88,6 +89,7 @@ impl Proxy {
   }
 }
 
+/// Created by [`Proxy::spawn`].
 pub struct RunningProxy {
   pub server: MockLambdaRuntimeApiServer,
   /// The lambda handler process.

@@ -6,6 +6,7 @@ use hyper_util::rt::TokioIo;
 use std::ops::{Deref, DerefMut};
 use tokio::net::TcpStream;
 
+/// An http client for the Lambda Runtime API.
 pub struct LambdaRuntimeApiClient<ReqBody>(SendRequest<ReqBody>);
 
 impl<ReqBody> Deref for LambdaRuntimeApiClient<ReqBody> {
