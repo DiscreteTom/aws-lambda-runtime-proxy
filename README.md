@@ -25,7 +25,7 @@ cargo add aws-lambda-runtime-proxy
 
 ### [Examples](./examples)
 
-A real world case: [AWS Lambda Log Proxy](https://github.com/DiscreteTom/aws-lambda-log-proxy).
+A real world case: [AWS Lambda Post Runner](https://github.com/DiscreteTom/aws-lambda-post-runner).
 
 ### [Documentation](https://docs.rs/aws-lambda-runtime-proxy/)
 
