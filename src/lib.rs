@@ -77,7 +77,7 @@ impl Proxy {
       })
       .unwrap_or(3000);
 
-    let mut command = self.command.unwrap_or_else(|| Self::default_command());
+    let mut command = self.command.unwrap_or_else(Self::default_command);
     command.env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port));
 
     let server = MockLambdaRuntimeApiServer::bind(port).await;
