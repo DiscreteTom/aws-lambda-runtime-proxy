@@ -8,6 +8,7 @@ use hyper::{
 use hyper_util::rt::TokioIo;
 use std::{future::Future, net::SocketAddr};
 use tokio::net::TcpListener;
+use tracing::error;
 
 /// A mock server for the Lambda Runtime API.
 /// Use [`Self::bind`] to create a new server, and [`Self::serve`] to start serving requests.
@@ -48,7 +49,7 @@ impl MockLambdaRuntimeApiServer {
         .serve_connection(io, service_fn(|req| async { processor(req).await }))
         .await
       {
-        println!("Error serving connection: {:?}", err);
+        error!("Error serving connection: {:?}", err);
       }
     });
   }

@@ -7,6 +7,7 @@ use hyper::{
 use hyper_util::rt::TokioIo;
 use std::ops::{Deref, DerefMut};
 use tokio::net::TcpStream;
+use tracing::error;
 
 /// An http client for the Lambda Runtime API.
 pub struct LambdaRuntimeApiClient<ReqBody>(SendRequest<ReqBody>);
@@ -44,7 +45,7 @@ impl<ReqBody: Body + Send + 'static> LambdaRuntimeApiClient<ReqBody> {
     // Spawn a task to poll the connection, driving the HTTP state
     tokio::task::spawn(async move {
       if let Err(err) = conn.await {
-        println!("Connection failed: {:?}", err);
+        error!("Connection failed: {:?}", err);
       }
     });
 

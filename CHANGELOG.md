@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Next
+
+- Feat: apply `tracing` instead of just `println` on error.
+
 ## v0.2.1
 
 - Feat: add `LambdaRuntimeApiClient::forward`.
