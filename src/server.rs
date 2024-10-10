@@ -9,21 +9,31 @@ use hyper::{
 use hyper_util::rt::TokioIo;
 use std::{future::Future, net::SocketAddr};
 use tokio::{io, net::TcpListener};
-use tracing::error;
+use tracing::{debug, error};
 
 /// A mock server for the Lambda Runtime API.
 /// Use [`Self::bind`] to create a new server, and [`Self::serve`] to start serving requests.
 ///
 /// If you want to handle each connection manually, use [`Self::handle_next`].
 /// If you want to forward requests to the real Lambda Runtime API, use [`Self::passthrough`].
+/// # Examples
+/// ```
+/// use aws_lambda_runtime_proxy::MockLambdaRuntimeApiServer;
+///
+/// # async fn t1() {
+/// let server = MockLambdaRuntimeApiServer::bind(3000).await.unwrap();
+/// // proxy all requests to the real Lambda Runtime API
+/// server.passthrough().await;
+/// # }
+/// ```
 pub struct MockLambdaRuntimeApiServer(TcpListener);
 
 impl MockLambdaRuntimeApiServer {
   /// Create a new server bound to the provided port.
   pub async fn bind(port: u16) -> io::Result<Self> {
-    Ok(Self(
-      TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], port))).await?,
-    ))
+    let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], port))).await?;
+    debug!("Listening on: {}", listener.local_addr()?);
+    Ok(Self(listener))
   }
 
   /// Handle the next incoming connection with the provided processor.
@@ -37,8 +47,8 @@ impl MockLambdaRuntimeApiServer {
     Fut: Future<Output = Result<Response<ResBody>>> + Send,
     <ResBody as Body>::Data: Send,
   {
-    let (stream, _) = self.0.accept().await.expect("Failed to accept connection");
-    let io = TokioIo::new(stream);
+    let (stream, peer) = self.0.accept().await?;
+    debug!("Accepted connection from: {}", peer);
 
     // in lambda's execution environment there is usually only one connection
     // but we can't rely on that, so spawn a task for each connection
