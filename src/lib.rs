@@ -15,7 +15,7 @@ pub use server::*;
 /// You can also use [`MockLambdaRuntimeApiServer`] and [`LambdaRuntimeApiClient`] directly.
 /// # Examples
 /// ```
-/// use lambda_runtime_proxy::Proxy;
+/// use aws_lambda_runtime_proxy::Proxy;
 ///
 /// # async fn t1() {
 /// // create the proxy server and the handler process using the default configuration
@@ -39,7 +39,7 @@ impl Proxy {
   /// You can modify the handler command and pass it to [`Self::command`].
   /// # Examples
   /// ```
-  /// use lambda_runtime_proxy::Proxy;
+  /// use aws_lambda_runtime_proxy::Proxy;
   /// use std::process::Stdio;
   ///
   /// # async fn t1() {
