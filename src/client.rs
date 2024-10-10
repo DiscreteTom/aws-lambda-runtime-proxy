@@ -16,6 +16,22 @@ use tracing::error;
 
 /// An http client for the Lambda Runtime API.
 /// A new-type wrapper around [`SendRequest<ReqBody>`].
+/// # Examples
+/// ```
+/// # use hyper::{body::Incoming, Request};
+/// use aws_lambda_runtime_proxy::LambdaRuntimeApiClient;
+///
+/// # async fn t1(req: Request<Incoming>) {
+/// let mut client = LambdaRuntimeApiClient::new().await.unwrap();
+/// // forward the original request to the runtime API
+/// client.forward(req).await.unwrap();
+/// # }
+/// # async fn t2(req: Request<Incoming>) {
+/// # let mut client = LambdaRuntimeApiClient::new().await.unwrap();
+/// // construct a custom request and send it to the runtime API
+/// client.as_mut().send_request(req).await.unwrap();
+/// # }
+/// ```
 pub struct LambdaRuntimeApiClient<ReqBody>(SendRequest<ReqBody>);
 
 impl<ReqBody> AsRef<SendRequest<ReqBody>> for LambdaRuntimeApiClient<ReqBody> {
