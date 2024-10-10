@@ -4,6 +4,7 @@
 
 - **_Breaking Change_**: apply `anyhow` for better error handling.
 - **_Breaking Change_**: remove the implementation of `Deref/DerefMut` for `LambdaRuntimeApiClient`, implement `AsRef/AsMut` instead.
+- **_Breaking Change_**: `LambdaRuntimeApiClient::forward` now require a `&self`.
 - Feat: apply `tracing` instead of just `println` on error.
 
 ## v0.2.1

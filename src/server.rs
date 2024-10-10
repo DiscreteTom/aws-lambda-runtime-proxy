@@ -74,7 +74,12 @@ impl MockLambdaRuntimeApiServer {
   /// forwarding requests to a new [`LambdaRuntimeApiClient`], and responding with the client's response.
   pub async fn passthrough(&self) {
     self
-      .serve(|req| async { LambdaRuntimeApiClient::forward(req).await })
+      .serve(|req| async {
+        // tested and it looks like creating the client every time is faster
+        // than locking an Arc<Mutex<LambdaRuntimeApiClient>> and reuse it.
+        // creating a new client and sending the request usually cost < 1ms.
+        LambdaRuntimeApiClient::new().await?.forward(req).await
+      })
       .await
   }
 }

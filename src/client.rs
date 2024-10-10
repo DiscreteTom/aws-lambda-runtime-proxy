@@ -56,19 +56,13 @@ impl<ReqBody: Body + Send + 'static> LambdaRuntimeApiClient<ReqBody> {
 
 impl LambdaRuntimeApiClient<Incoming> {
   /// Send a request to the runtime API and return the response.
-  pub async fn forward(req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
-    // tested and it looks like we create the client every time is faster than lock a Arc<Mutex<>> and reuse it.
-    // create a new client and send the request usually cost < 1ms.
-    let res = LambdaRuntimeApiClient::new()
-      .await?
-      .as_mut()
-      .send_request(req)
-      .await?;
+  pub async fn forward(&mut self, req: Request<Incoming>) -> Result<Response<Full<Bytes>>> {
+    let res = self.as_mut().send_request(req).await?;
     let (parts, body) = res.into_parts();
     let bytes = body.collect().await?.to_bytes();
     Ok(Response::from_parts(parts, Full::new(bytes)))
 
-    // TODO: why we can't just return `LambdaRuntimeApiClient::new().await.send_request(req).await`?
+    // TODO: why we can't just return `self.send_request(req).await`?
     // tested and it works but will add ~40ms latency when serving API GW event (maybe for all big event), why?
     // maybe because of the `Incoming` type? can we stream the body instead of buffering it?
   }
