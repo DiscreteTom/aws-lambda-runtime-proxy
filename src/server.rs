@@ -30,7 +30,8 @@ impl MockLambdaRuntimeApiServer {
   pub async fn handle_next<ResBody, Fut>(
     &self,
     processor: impl Fn(Request<Incoming>) -> Fut + Send + Sync + 'static,
-  ) where
+  ) -> io::Result<()>
+  where
     ResBody: hyper::body::Body + Send + 'static,
     <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>> + Send,
     Fut: Future<Output = Result<Response<ResBody>>> + Send,
@@ -43,12 +44,17 @@ impl MockLambdaRuntimeApiServer {
     // but we can't rely on that, so spawn a task for each connection
     tokio::spawn(async move {
       if let Err(err) = http1::Builder::new()
-        .serve_connection(io, service_fn(|req| async { processor(req).await }))
+        .serve_connection(
+          TokioIo::new(stream),
+          service_fn(|req| async { processor(req).await }),
+        )
         .await
       {
         error!("Error serving connection: {:?}", err);
       }
     });
+
+    Ok(())
   }
 
   /// Block the current thread and handle connections with the processor in a loop.
@@ -62,7 +68,9 @@ impl MockLambdaRuntimeApiServer {
     <ResBody as Body>::Data: Send,
   {
     loop {
-      self.handle_next(processor.clone()).await
+      if let Err(err) = self.handle_next(processor.clone()).await {
+        error!("Error handling connection: {:?}", err);
+      }
     }
   }
 
