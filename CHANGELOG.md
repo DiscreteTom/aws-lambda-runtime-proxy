@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Next
+## v0.3.0
 
 - **_Breaking Change_**: apply `anyhow` for better error handling.
 - **_Breaking Change_**: remove the implementation of `Deref/DerefMut` for `LambdaRuntimeApiClient`, implement `AsRef/AsMut` instead.
