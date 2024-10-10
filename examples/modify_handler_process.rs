@@ -4,6 +4,7 @@ use std::process::Stdio;
 #[tokio::main]
 async fn main() {
   let mut handler = Proxy::default_command()
+    .unwrap()
     // capture stdout
     .stdout(Stdio::piped())
     // override environment variables for the handler process

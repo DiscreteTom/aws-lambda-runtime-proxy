@@ -1,10 +1,11 @@
 mod client;
 mod server;
 
+use anyhow::Result;
+use tokio::process::{Child, Command};
+
 pub use client::*;
 pub use server::*;
-
-use tokio::process::{Child, Command};
 
 /// Use [`Proxy::spawn`] to create a new proxy server and handler process.
 #[derive(Default)]
@@ -43,10 +44,10 @@ impl Proxy {
   ///     .spawn().await;
   /// }
   /// ```
-  pub fn default_command() -> Command {
-    let mut cmd = Command::new(std::env::args().nth(1).expect("Missing handler command"));
+  pub fn default_command() -> Option<Command> {
+    let mut cmd = Command::new(std::env::args().nth(1)?);
     cmd.args(std::env::args().skip(2));
-    cmd
+    cmd.into()
   }
 
   /// Set the port of the proxy server.
@@ -67,7 +68,7 @@ impl Proxy {
   /// Spawn the proxy server and the handler process.
   /// The handler process will be spawned with the environment variable `AWS_LAMBDA_RUNTIME_API`
   /// set to the address of the proxy server.
-  pub async fn spawn(self) -> RunningProxy {
+  pub async fn spawn(self) -> Result<RunningProxy> {
     let port = self
       .port
       .or_else(|| {
@@ -77,15 +78,18 @@ impl Proxy {
       })
       .unwrap_or(3000);
 
-    let mut command = self.command.unwrap_or_else(Self::default_command);
+    let mut command = self
+      .command
+      .or_else(Self::default_command)
+      .ok_or_else(|| anyhow::anyhow!("Handler command is not set."))?;
     command.env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port));
 
     let server = MockLambdaRuntimeApiServer::bind(port).await;
 
     // server is ready, spawn the real handler process
-    let handler = command.spawn().expect("Failed to spawn handler process");
+    let handler = command.spawn()?;
 
-    RunningProxy { server, handler }
+    Ok(RunningProxy { server, handler })
   }
 }
 

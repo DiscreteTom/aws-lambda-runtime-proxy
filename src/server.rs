@@ -1,4 +1,5 @@
 use crate::LambdaRuntimeApiClient;
+use anyhow::Result;
 use hyper::{
   body::{Body, Incoming},
   server::conn::http1,
@@ -36,7 +37,7 @@ impl MockLambdaRuntimeApiServer {
   ) where
     ResBody: hyper::body::Body + Send + 'static,
     <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>> + Send,
-    Fut: Future<Output = hyper::Result<Response<ResBody>>> + Send,
+    Fut: Future<Output = Result<Response<ResBody>>> + Send,
     <ResBody as Body>::Data: Send,
   {
     let (stream, _) = self.0.accept().await.expect("Failed to accept connection");
@@ -59,7 +60,7 @@ impl MockLambdaRuntimeApiServer {
     &self,
     processor: impl Fn(Request<Incoming>) -> Fut + Send + Sync + Clone + 'static,
   ) where
-    Fut: Future<Output = hyper::Result<Response<ResBody>>> + Send,
+    Fut: Future<Output = Result<Response<ResBody>>> + Send,
     ResBody: hyper::body::Body + Send + 'static,
     <ResBody as Body>::Error: Into<Box<dyn std::error::Error + Send + Sync>> + Send,
     <ResBody as Body>::Data: Send,

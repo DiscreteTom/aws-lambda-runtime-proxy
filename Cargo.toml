@@ -24,6 +24,7 @@ tokio = { version = "1", features = ["process", "rt", "net"] }
 hyper-util = { version = "0.1.3", features = ["tokio"] }
 http-body-util = "0.1.1"
 tracing = { version = "0.1", features = ["log"] }
+anyhow = "1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
