@@ -7,27 +7,16 @@
 
 A helper lib to customize the communication between the lambda handler process and the lambda runtime api.
 
-## Usage
+## [Documentation](https://docs.rs/aws-lambda-runtime-proxy/)
 
-### Installation
+## Examples
 
-Add the following to the `dependencies` in your `Cargo.toml`:
+See the [examples](./examples) folder for more details.
 
-```toml
-aws-lambda-runtime-proxy = "0.2"
-```
+Some real world cases:
 
-or run:
-
-```bash
-cargo add aws-lambda-runtime-proxy
-```
-
-### [Examples](./examples)
-
-A real world case: [AWS Lambda Post Runner](https://github.com/DiscreteTom/aws-lambda-post-runner).
-
-### [Documentation](https://docs.rs/aws-lambda-runtime-proxy/)
+- [AWS Lambda Post Runner](https://github.com/aws-samples/aws-lambda-post-runner/)
+- [AWS Lambda Log Proxy](https://github.com/DiscreteTom/aws-lambda-log-proxy)
 
 ## FAQ
 
