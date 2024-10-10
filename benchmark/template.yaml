@@ -7,7 +7,7 @@ Globals:
     Runtime: nodejs20.x
     CodeUri: nodejs
     MemorySize: 1024
-    Timeout: 30
+    Timeout: 5
 
 Resources:
   LambdaRuntimeProxyLayer:
@@ -41,5 +41,7 @@ Resources:
             Method: get
 
 Outputs:
-  API:
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  ProxyEnabledEndpoint:
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/enabled"
+  ProxyDisabledEndpoint:
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/disabled"

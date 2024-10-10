@@ -1,8 +1,13 @@
 version = 0.1
+
 [default.deploy.parameters]
 stack_name = "LambdaRuntimeProxyBenchmark"
 resolve_s3 = true
 s3_prefix = "LambdaRuntimeProxyBenchmark"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
-image_repositories = []
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+[default.local_start_lambda.parameters]
+warm_containers = "EAGER"

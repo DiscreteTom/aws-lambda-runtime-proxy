@@ -1,24 +1,39 @@
 # Benchmark
 
+## Build
+
+```bash
+rm -rf ./layer
+mkdir -p ./layer
+
+cargo build --release --target x86_64-unknown-linux-musl --example hello_world
+cp ../target/x86_64-unknown-linux-musl/release/examples/hello_world ./layer
+
+cp ./scripts/entry.sh ./layer
+chmod +x ./layer/entry.sh
+
+sam build
+```
+
+## Local Test
+
+Check if the proxy works as expected:
+
+```bash
+sam local start-api
+```
+
+In another terminal:
+
+```bash
+curl localhost:3000/disabled
+curl localhost:3000/enabled
+```
+
 ## Deploy
 
 ```bash
-# run in the root of the project
-RUSTFLAGS="-C link-arg=-s" cargo build --release --target x86_64-unknown-linux-musl --example hello_world
-mkdir -p benchmark/layer
-cp target/x86_64-unknown-linux-musl/release/examples/hello_world benchmark/layer/
-cp benchmark/scripts/entry.sh benchmark/layer/
-
-cd benchmark
-sam build
-sam deploy # maybe add '-g' for the first time
-cd ..
-```
-
-In one line
-
-```bash
-RUSTFLAGS="-C link-arg=-s" cargo build --release --target x86_64-unknown-linux-musl --example hello_world && mkdir -p benchmark/layer && cp target/x86_64-unknown-linux-musl/release/examples/hello_world benchmark/layer/ && cp benchmark/scripts/entry.sh benchmark/layer/ && cd benchmark && sam build && sam deploy && cd ..
+sam deploy -g
 ```
 
 ## Test
