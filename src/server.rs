@@ -8,7 +8,7 @@ use hyper::{
 };
 use hyper_util::rt::TokioIo;
 use std::{future::Future, net::SocketAddr};
-use tokio::net::TcpListener;
+use tokio::{io, net::TcpListener};
 use tracing::error;
 
 /// A mock server for the Lambda Runtime API.
@@ -20,14 +20,10 @@ pub struct MockLambdaRuntimeApiServer(TcpListener);
 
 impl MockLambdaRuntimeApiServer {
   /// Create a new server bound to the provided port.
-  pub async fn bind(port: u16) -> Self {
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
-
-    Self(
-      TcpListener::bind(addr)
-        .await
-        .expect("Failed to bind for proxy server"),
-    )
+  pub async fn bind(port: u16) -> io::Result<Self> {
+    Ok(Self(
+      TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], port))).await?,
+    ))
   }
 
   /// Handle the next incoming connection with the provided processor.

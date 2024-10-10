@@ -84,7 +84,7 @@ impl Proxy {
       .ok_or_else(|| anyhow::anyhow!("Handler command is not set."))?;
     command.env("AWS_LAMBDA_RUNTIME_API", format!("127.0.0.1:{}", port));
 
-    let server = MockLambdaRuntimeApiServer::bind(port).await;
+    let server = MockLambdaRuntimeApiServer::bind(port).await?;
 
     // server is ready, spawn the real handler process
     let handler = command.spawn()?;
