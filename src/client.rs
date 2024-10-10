@@ -6,22 +6,20 @@ use hyper::{
   Request, Response,
 };
 use hyper_util::rt::TokioIo;
-use std::ops::{Deref, DerefMut};
 use tokio::net::TcpStream;
 use tracing::error;
 
 /// An http client for the Lambda Runtime API.
+/// A new-type wrapper around [`SendRequest<ReqBody>`].
 pub struct LambdaRuntimeApiClient<ReqBody>(SendRequest<ReqBody>);
 
-// TODO: use AsRef instead of Deref?
-impl<ReqBody> Deref for LambdaRuntimeApiClient<ReqBody> {
-  type Target = SendRequest<ReqBody>;
-  fn deref(&self) -> &Self::Target {
+impl<ReqBody> AsRef<SendRequest<ReqBody>> for LambdaRuntimeApiClient<ReqBody> {
+  fn as_ref(&self) -> &SendRequest<ReqBody> {
     &self.0
   }
 }
-impl<ReqBody> DerefMut for LambdaRuntimeApiClient<ReqBody> {
-  fn deref_mut(&mut self) -> &mut Self::Target {
+impl<ReqBody> AsMut<SendRequest<ReqBody>> for LambdaRuntimeApiClient<ReqBody> {
+  fn as_mut(&mut self) -> &mut SendRequest<ReqBody> {
     &mut self.0
   }
 }
@@ -58,6 +56,7 @@ impl LambdaRuntimeApiClient<Incoming> {
     // create a new client and send the request usually cost < 1ms.
     let res = LambdaRuntimeApiClient::new()
       .await?
+      .as_mut()
       .send_request(req)
       .await?;
     let (parts, body) = res.into_parts();
