@@ -1,13 +1,29 @@
 mod client;
 mod server;
 
+use std::env;
+
 use anyhow::Result;
 use tokio::process::{Child, Command};
 
 pub use client::*;
 pub use server::*;
 
-/// Use [`Proxy::spawn`] to create a new proxy server and handler process.
+/// This is the high level API for this crate,
+/// which will create a [`MockLambdaRuntimeApiServer`] and a handler process.
+///
+/// You can also use [`MockLambdaRuntimeApiServer`] and [`LambdaRuntimeApiClient`] directly.
+/// # Examples
+/// ```
+/// use lambda_runtime_proxy::Proxy;
+///
+/// # async fn t1() {
+/// // create the proxy server and the handler process using the default configuration
+/// let proxy = Proxy::default().spawn().await.unwrap();
+/// // forward all requests to the real Lambda Runtime API
+/// proxy.server.passthrough().await;
+/// # }
+/// ```
 #[derive(Default)]
 pub struct Proxy {
   /// See [`Self::port`].
@@ -26,27 +42,27 @@ impl Proxy {
   /// use lambda_runtime_proxy::Proxy;
   /// use std::process::Stdio;
   ///
-  /// #[tokio::main]
-  /// async fn main {
-  ///   // retrieve the default handler command
-  ///   let mut command = Proxy::default_command();
+  /// # async fn t1() {
+  /// // retrieve the default handler command
+  /// let mut command = Proxy::default_command().unwrap();
   ///
-  ///   // enhance the handler command
-  ///   command
-  ///     // override environment variables for the handler process
-  ///     .env("KEY", "VALUE")
-  ///     // pipe the stdout and stderr of the handler process
-  ///     .stdout(Stdio::piped())
-  ///     .stderr(Stdio::piped());
+  /// // enhance the handler command
+  /// command
+  ///   // override environment variables for the handler process
+  ///   .env("KEY", "VALUE")
+  ///   // pipe the stdout and stderr of the handler process
+  ///   .stdout(Stdio::piped())
+  ///   .stderr(Stdio::piped());
   ///
-  ///   Proxy::default()
-  ///     .command(command)
-  ///     .spawn().await;
-  /// }
+  /// Proxy::default()
+  ///   .command(command)
+  ///   .spawn()
+  ///   .await;
+  /// # }
   /// ```
   pub fn default_command() -> Option<Command> {
-    let mut cmd = Command::new(std::env::args().nth(1)?);
-    cmd.args(std::env::args().skip(2));
+    let mut cmd = Command::new(env::args().nth(1)?);
+    cmd.args(env::args().skip(2));
     cmd.into()
   }
 
@@ -72,7 +88,7 @@ impl Proxy {
     let port = self
       .port
       .or_else(|| {
-        std::env::var("AWS_LAMBDA_RUNTIME_PROXY_PORT")
+        env::var("AWS_LAMBDA_RUNTIME_PROXY_PORT")
           .ok()
           .and_then(|s| s.parse().ok())
       })
