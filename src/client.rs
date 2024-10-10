@@ -1,3 +1,8 @@
+use std::{
+  env::{self, VarError},
+  sync::LazyLock,
+};
+
 use anyhow::Result;
 use http_body_util::{BodyExt, Full};
 use hyper::{
@@ -31,10 +36,10 @@ impl<ReqBody: Body + Send + 'static> LambdaRuntimeApiClient<ReqBody> {
     ReqBody::Data: Send,
     ReqBody::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
   {
-    let address = std::env::var("AWS_LAMBDA_RUNTIME_API")?; // TODO: cache the result?
+    static REAL_RUNTIME_API: LazyLock<Result<String, VarError>> =
+      LazyLock::new(|| env::var("AWS_LAMBDA_RUNTIME_API"));
 
-    // TODO: re-use the connection?
-    let stream = TcpStream::connect(address).await?;
+    let stream = TcpStream::connect(REAL_RUNTIME_API.as_ref()?).await?;
     let io = TokioIo::new(stream);
     let (sender, conn) = http1::handshake(io).await?;
 
